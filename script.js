@@ -230,41 +230,70 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   /* ──────────────────────────────────────────
-     9. UPSELL MODAL LOGIC (R$10 -> R$15,90)
+     9. UTM & QUERY PARAMETERS PASSTHROUGH
   ────────────────────────────────────────── */
-  const ctaBasic = document.getElementById('cta-basic');
-  const upsellModal = document.getElementById('upsell-modal');
-  const modalCloseBtn = document.getElementById('modal-close-btn');
-
-  if (ctaBasic && upsellModal) {
-    ctaBasic.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (e.stopImmediatePropagation) e.stopImmediatePropagation();
-      upsellModal.style.display = 'flex';
-      // Trigger animation frame for transition
-      setTimeout(() => {
-        upsellModal.classList.add('active');
-      }, 10);
-      return false;
-    });
-
-    const closeModal = () => {
-      upsellModal.classList.remove('active');
-      setTimeout(() => {
-        upsellModal.style.display = 'none';
-      }, 300);
-    };
-
-    if (modalCloseBtn) {
-      modalCloseBtn.addEventListener('click', closeModal);
+  function getStoredOrCurrentParams() {
+    const currentParams = new URLSearchParams(window.location.search);
+    if (window.location.search && currentParams.toString()) {
+      try {
+        sessionStorage.setItem('utm_params', currentParams.toString());
+        localStorage.setItem('utm_params', currentParams.toString());
+      } catch (e) {}
+      return currentParams;
     }
 
-    upsellModal.addEventListener('click', (e) => {
-      if (e.target === upsellModal) {
-        closeModal();
+    try {
+      const stored = sessionStorage.getItem('utm_params') || localStorage.getItem('utm_params');
+      if (stored) {
+        return new URLSearchParams(stored);
+      }
+    } catch (e) {}
+
+    return new URLSearchParams();
+  }
+
+  function appendUtmsToUrl(urlStr, params) {
+    if (!params || !params.toString()) return urlStr;
+    try {
+      const url = new URL(urlStr, window.location.origin);
+      params.forEach((value, key) => {
+        url.searchParams.set(key, value);
+      });
+      return url.toString();
+    } catch (e) {
+      const sep = urlStr.includes('?') ? '&' : '?';
+      return urlStr + sep + params.toString();
+    }
+  }
+
+  function updateAllCheckoutLinks() {
+    const params = getStoredOrCurrentParams();
+    if (!params.toString()) return;
+
+    const links = document.querySelectorAll('a[href*="ggcheckout.app"], a[href*="checkout"], #cta-basic, #cta-pricing');
+    links.forEach(link => {
+      const href = link.getAttribute('href');
+      if (href && !href.startsWith('#') && !href.startsWith('javascript:')) {
+        link.href = appendUtmsToUrl(href, params);
       }
     });
   }
 
+  updateAllCheckoutLinks();
+
+  // Intercept click to guarantee parameters are appended dynamically
+  document.addEventListener('click', (e) => {
+    const link = e.target.closest('a');
+    if (!link) return;
+    const href = link.getAttribute('href');
+    if (href && (href.includes('ggcheckout.app') || href.includes('checkout')) && !href.startsWith('#') && !href.startsWith('javascript:')) {
+      const params = getStoredOrCurrentParams();
+      if (params.toString()) {
+        link.href = appendUtmsToUrl(link.href, params);
+      }
+    }
+  }, true);
+
 });
+
+
