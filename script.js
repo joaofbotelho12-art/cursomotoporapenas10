@@ -92,10 +92,20 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   /* ──────────────────────────────────────────
-     6. COUNTDOWN TIMER (Urgency)
+     6. COUNTDOWN TIMER & DYNAMIC DATE (Urgency)
   ────────────────────────────────────────── */
-  // Show time remaining until midnight
   const urgencyBar = document.getElementById('urgency-bar');
+  const currentDateEl = document.getElementById('current-date');
+
+  if (currentDateEl) {
+    const today = new Date();
+    const day = String(today.getDate()).padStart(2, '0');
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const year = today.getFullYear();
+    currentDateEl.textContent = `${day}/${month}/${year}`;
+  }
+
+  // Show time remaining until midnight
 
   function getTimeLeft() {
     const now = new Date();
